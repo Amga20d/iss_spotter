@@ -9,15 +9,15 @@ const fetchMyIP = function(callback) {
       return;
     }
     if (response.statusCode !== 200) {
-        const msg = `Status Code ${response.statusCode} when fetching IP. Response: ${response.body}`;
-        callback(Error(msg), null);
-        return;
+      const msg = `Status Code ${response.statusCode} when fetching IP. Response: ${response.body}`;
+      callback(Error(msg), null);
+      return;
     }
     const ip = response.body.ip;
     callback(null, ip);
   });
 };
- 
+
 const fetchCoordsByIP = function(ip, callback) {
   const url = `https://ipwho.is/${ip}`;
 
@@ -40,7 +40,6 @@ const fetchCoordsByIP = function(ip, callback) {
   });
 };
 
- 
 const fetchISSFlyOverTimes = function(coords, callback) {
   const url = `https://iss-flyover.herokuapp.com/json/?lat=${coords.latitude}&lon=${coords.longitude}`;
 
@@ -59,9 +58,35 @@ const fetchISSFlyOverTimes = function(coords, callback) {
   });
 };
 
-module.exports = { fetchISSFlyOverTimes };
+const nextISSTimesForMyLocation = function(callback) {
+  fetchMyIP((error, ip) => {
+    if (error) {
+      callback(error, null);
+      return;
+    }
 
+    fetchCoordsByIP(ip, (error, coords) => {
+      if (error) {
+        callback(error, null);
+        return;
+      }
 
+      fetchISSFlyOverTimes(coords, (error, flyoverTimes) => {
+        if (error) {
+          callback(error, null);
+          return;
+        }
 
+        const formattedTimes = flyoverTimes.map(pass => {
+          const datetime = new Date(pass.risetime * 1000);
+          const duration = pass.duration;
+          return `Next pass at ${datetime} for ${duration} seconds!`;
+        });
 
-module.exports = { fetchMyIP, fetchCoordsByIP, fetchISSFlyOverTimes };
+        callback(null, formattedTimes);
+      });
+    });
+  });
+};
+
+module.exports = { fetchMyIP, fetchCoordsByIP, fetchISSFlyOverTimes, nextISSTimesForMyLocation };
